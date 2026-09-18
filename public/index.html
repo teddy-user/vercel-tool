@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng Quản Lý Đa Tài Khoản - Garena API Scheduler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#e11d48',
+            brandDark: '#be123c',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-3 md:p-8">
+
+  <div class="w-full max-w-4xl space-y-6">
+
+    <!-- Header -->
+    <header class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center font-bold text-xl shadow-lg shadow-rose-600/30">
+          👥
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            Garena API Scheduler
+            <span class="text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full font-medium">Đa Tài Khoản</span>
+          </h1>
+          <p class="text-xs text-slate-400">Tự động gọi 2 Init x 3 Submit cho tất cả tài khoản</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700/50 text-xs">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="headerScheduleBadge" class="text-slate-300 font-medium">Lịch chạy: 15:00 & 03:00 (UTC+7)</span>
+      </div>
+    </header>
+
+    <!-- Card 1: Thêm tài khoản mới -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+      <div class="border-b border-slate-800 pb-3 flex justify-between items-center">
+        <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+          ➕ Thêm Tài Khoản Vào Danh Sách
+        </h2>
+        <span class="text-xs text-slate-400">Cả bạn và bạn bè đều có thể thêm acc tại đây</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Input: Tài khoản -->
+        <div>
+          <label class="block text-xs font-medium text-rose-400 mb-1">
+            Tài khoản Garena *
+          </label>
+          <input 
+            type="text" 
+            id="newAccountInput" 
+            placeholder="Ví dụ: nghjalsss" 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-rose-500 transition"
+          >
+        </div>
+
+        <!-- Input: Số điện thoại nhận OTP -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">
+            Số điện thoại nhận OTP *
+          </label>
+          <input 
+            type="text" 
+            id="newPhoneInput" 
+            placeholder="Ví dụ: 84123456789" 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-slate-600 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-700 transition"
+          >
+        </div>
+
+        <!-- Input: Cookie DataDome (tùy chọn) -->
+        <div class="md:col-span-2">
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-medium text-slate-300">
+              Cookie DataDome (Tùy chọn - nếu tài khoản có cookie riêng)
+            </label>
+            <button onclick="toggleCookieHelp()" class="text-xs text-amber-400 hover:underline">
+              ❓ Cách lấy Cookie
+            </button>
+          </div>
+          <input 
+            type="text" 
+            id="newCookieInput" 
+            placeholder="Dán Cookie datadome=... (nếu có, hoặc để trống sẽ dùng cookie mặc định hệ thống)"
+            class="w-full bg-slate-950 border border-slate-800 focus:border-slate-600 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-700 transition"
+          >
+
+          <div id="cookieHelpBox" class="hidden mt-2 p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl text-xs text-amber-200/90 leading-relaxed space-y-1">
+            <p><strong>3 bước lấy Cookie:</strong></p>
+            <p>1. Vào <a href="https://account.garena.com/recovery" target="_blank" class="underline font-bold">account.garena.com/recovery</a> và nhấn <strong>F12</strong> (Network tab).</p>
+            <p>2. Nhập tài khoản và bấm tiếp tục $\rightarrow$ tìm request <code>init</code> trong danh sách mạng.</p>
+            <p>3. Trong mục <strong>Headers</strong> $\rightarrow$ <strong>Request Headers</strong> $\rightarrow$ copy giá trị dòng <strong>Cookie</strong> và dán vào đây.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-1 flex justify-end">
+        <button 
+          id="btnAddAccount" 
+          onclick="handleAddAccount()" 
+          class="w-full sm:w-auto bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold py-2.5 px-6 rounded-xl shadow-lg shadow-rose-900/30 flex items-center justify-center gap-2 transition active:scale-[0.98]"
+        >
+          <span>➕</span>
+          <span>Thêm Tài Khoản Này</span>
+        </button>
+      </div>
+
+      <div id="statusToast" class="hidden p-3 rounded-xl text-xs text-center font-medium transition-all"></div>
+    </section>
+
+    <!-- Card 2: Cài đặt Khung Giờ Chạy Tự Động (MỚI) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            ⏰ Cài Đặt Khung Giờ Chạy Tự Động (Giờ VN - UTC+7)
+          </h2>
+          <p class="text-xs text-slate-400">Tùy chỉnh các mốc thời gian trong ngày để hệ thống tự động chạy</p>
+        </div>
+
+        <button 
+          id="btnSaveSchedule" 
+          onclick="handleSaveSchedule()" 
+          class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md shadow-rose-900/30 flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+        >
+          <span>💾</span>
+          <span>Lưu Cài Đặt Lịch Chạy</span>
+        </button>
+      </div>
+
+      <!-- Danh sách các mốc giờ đang kích hoạt -->
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-2">Các mốc giờ đang được kích hoạt:</label>
+        <div id="scheduleChipsContainer" class="flex flex-wrap items-center gap-2">
+          <!-- Chips render bằng JS -->
+        </div>
+      </div>
+
+      <!-- Khung thêm mốc giờ mới -->
+      <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 flex flex-wrap items-center gap-3">
+        <span class="text-xs text-slate-300 font-medium">Thêm mốc giờ:</span>
+        <div class="flex items-center gap-1.5">
+          <select id="selectHour" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500">
+            <!-- 00 - 23 được render bằng JS -->
+          </select>
+          <span class="text-slate-500 font-bold">:</span>
+          <select id="selectMinute" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500">
+            <!-- 00 - 59 được render bằng JS -->
+          </select>
+        </div>
+        <button 
+          type="button" 
+          onclick="handleAddScheduleTime()" 
+          class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition"
+        >
+          ➕ Thêm Mốc Giờ
+        </button>
+
+        <!-- Nút chọn mẫu nhanh -->
+        <div class="flex items-center gap-2 ml-auto text-xs">
+          <span class="text-slate-500">Chọn mẫu nhanh:</span>
+          <button type="button" onclick="setPresetSchedule('default')" class="text-xs text-rose-400 hover:underline">15h & 3h sáng</button>
+          <span class="text-slate-700">|</span>
+          <button type="button" onclick="setPresetSchedule('morning_evening')" class="text-xs text-rose-400 hover:underline">8h & 20h</button>
+          <span class="text-slate-700">|</span>
+          <button type="button" onclick="setPresetSchedule('every_6h')" class="text-xs text-rose-400 hover:underline">Mỗi 6 tiếng</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Danh sách tài khoản hiện có -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            📋 Danh Sách Tài Khoản Sẽ Chạy Tự Động (<span id="accountsCount">0</span>)
+          </h2>
+          <p class="text-xs text-slate-400">Hệ thống sẽ chạy lần lượt tất cả tài khoản có trạng thái Hoạt động</p>
+        </div>
+
+        <!-- Nút Kích hoạt chạy tất cả -->
+        <button 
+          id="btnTriggerAll" 
+          onclick="handleTriggerAll()" 
+          class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md shadow-emerald-900/30 flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+        >
+          <span>⚡</span>
+          <span>Chạy TẤT CẢ Acc Ngay Bây Giờ</span>
+        </button>
+      </div>
+
+      <!-- Bảng tài khoản -->
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 font-medium uppercase tracking-wider">
+              <th class="py-2.5 px-3">Trạng thái</th>
+              <th class="py-2.5 px-3">Tài khoản Garena</th>
+              <th class="py-2.5 px-3">SĐT nhận OTP</th>
+              <th class="py-2.5 px-3">Cookie</th>
+              <th class="py-2.5 px-3 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="accountsTableBody" class="divide-y divide-slate-800/60">
+            <tr>
+              <td colspan="5" class="py-6 text-center text-slate-500">Đang tải danh sách tài khoản...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Card 4: Live Console -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+          📟 Nhật Ký Hoạt Động Trực Tiếp (Live Console)
+        </h3>
+        <button 
+          onclick="clearLogs()" 
+          class="text-xs text-slate-500 hover:text-slate-300 px-2.5 py-1 rounded bg-slate-800/50 hover:bg-slate-800 transition"
+        >
+          Xóa log
+        </button>
+      </div>
+
+      <div 
+        id="consoleOutput" 
+        class="bg-black/80 rounded-xl p-4 font-mono text-xs text-slate-300 h-64 overflow-y-auto custom-scrollbar border border-slate-800/80 space-y-1"
+      >
+        <div class="text-slate-500">// Hệ thống sẵn sàng. Bấm "Chạy riêng" trên từng acc hoặc "Chạy TẤT CẢ" để kiểm tra.</div>
+      </div>
+    </section>
+
+    <!-- Modal Xem & Chỉnh Sửa Cookie của tài khoản -->
+    <div id="cookieModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            🍪 Cookie Tài Khoản: <span id="modalAccountName" class="text-rose-400"></span>
+          </h3>
+          <button type="button" onclick="closeCookieModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1.5">
+            Nội dung chuỗi Cookie (chứa datadome=...):
+          </label>
+          <textarea 
+            id="modalCookieTextarea" 
+            rows="5" 
+            placeholder="Dán chuỗi cookie vào đây..." 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-rose-500 custom-scrollbar leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button 
+            type="button" 
+            onclick="copyModalCookie()" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-700 transition"
+          >
+            📋 Sao Chép
+          </button>
+          
+          <div class="flex items-center gap-2">
+            <button 
+              type="button" 
+              onclick="closeCookieModal()" 
+              class="bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs px-3.5 py-2 rounded-xl transition"
+            >
+              Hủy
+            </button>
+            <button 
+              type="button" 
+              onclick="saveModalCookie()" 
+              class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-lg shadow-rose-900/30 transition"
+            >
+              💾 Lưu Cookie
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const newAccountInput = document.getElementById('newAccountInput');
+    const newPhoneInput = document.getElementById('newPhoneInput');
+    const newCookieInput = document.getElementById('newCookieInput');
+    const accountsCount = document.getElementById('accountsCount');
+    const accountsTableBody = document.getElementById('accountsTableBody');
+    const statusToast = document.getElementById('statusToast');
+    const consoleOutput = document.getElementById('consoleOutput');
+    const btnTriggerAll = document.getElementById('btnTriggerAll');
+    const btnSaveSchedule = document.getElementById('btnSaveSchedule');
+    const headerScheduleBadge = document.getElementById('headerScheduleBadge');
+    const scheduleChipsContainer = document.getElementById('scheduleChipsContainer');
+    const selectHour = document.getElementById('selectHour');
+    const selectMinute = document.getElementById('selectMinute');
+
+    let currentAccounts = [];
+    let currentScheduleTimes = [
+      { hour: 3, minute: 0 },
+      { hour: 15, minute: 0 }
+    ];
+
+    // Khởi tạo danh sách giờ từ 00 đến 23 vào dropdown
+    for (let h = 0; h <= 23; h++) {
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = `${String(h).padStart(2, '0')}h (${h < 12 ? 'Sáng' : h === 12 ? 'Trưa' : h < 18 ? 'Chiều' : 'Tối'})`;
+      selectHour.appendChild(opt);
+    }
+    selectHour.value = 15;
+
+    // Khởi tạo danh sách phút từ 00 đến 59 vào dropdown
+    for (let m = 0; m <= 59; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${String(m).padStart(2, '0')} phút`;
+      selectMinute.appendChild(opt);
+    }
+    selectMinute.value = 0;
+
+    function log(msg, type = 'info') {
+      const line = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      let colorClass = 'text-slate-300';
+      if (type === 'success') colorClass = 'text-emerald-400 font-medium';
+      if (type === 'error') colorClass = 'text-rose-400 font-medium';
+      if (type === 'warn') colorClass = 'text-amber-400';
+      if (type === 'highlight') colorClass = 'text-sky-300 font-medium';
+
+      line.className = `${colorClass} leading-relaxed break-all`;
+      line.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    function clearLogs() {
+      consoleOutput.innerHTML = '<div class="text-slate-500">// Đã xóa nhật ký.</div>';
+    }
+
+    function showToast(msg, isSuccess = true) {
+      statusToast.className = `p-3 rounded-xl text-xs text-center font-medium ${
+        isSuccess ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+      }`;
+      statusToast.textContent = msg;
+      statusToast.classList.remove('hidden');
+      setTimeout(() => statusToast.classList.add('hidden'), 4000);
+    }
+
+    function toggleCookieHelp() {
+      const box = document.getElementById('cookieHelpBox');
+      box.classList.toggle('hidden');
+    }
+
+    // ==========================================
+    // QUẢN LÝ LỊCH CHẠY TỰ ĐỘNG
+    // ==========================================
+    function renderScheduleChips() {
+      scheduleChipsContainer.innerHTML = '';
+
+      if (currentScheduleTimes.length === 0) {
+        scheduleChipsContainer.innerHTML = '<span class="text-xs text-rose-400 italic">Chưa chọn mốc giờ nào (Hệ thống sẽ không tự động kích hoạt)</span>';
+        headerScheduleBadge.textContent = 'Chưa bật lịch tự động';
+        return;
+      }
+
+      currentScheduleTimes.sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+
+      const timeTexts = currentScheduleTimes.map(t => {
+        return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+      });
+      headerScheduleBadge.textContent = `Lịch chạy: ${timeTexts.join(', ')} (UTC+7)`;
+
+      currentScheduleTimes.forEach((t, idx) => {
+        const chip = document.createElement('div');
+        const formatted = `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+        const period = t.hour < 12 ? 'Sáng' : t.hour === 12 ? 'Trưa' : t.hour < 18 ? 'Chiều' : 'Tối';
+
+        chip.className = 'inline-flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-1 rounded-xl text-xs font-medium';
+        chip.innerHTML = `
+          <span>⏰ ${formatted} (${period})</span>
+          <button type="button" onclick="handleRemoveScheduleTime(${idx})" class="hover:text-rose-100 ml-1 text-rose-400/80 font-bold">✕</button>
+        `;
+        scheduleChipsContainer.appendChild(chip);
+      });
+    }
+
+    async function handleAddScheduleTime() {
+      const hour = Number(selectHour.value);
+      const minute = Number(selectMinute.value);
+
+      const exists = currentScheduleTimes.some(t => t.hour === hour && t.minute === minute);
+      if (exists) {
+        showToast('Mốc giờ này đã có trong lịch!', false);
+        return;
+      }
+
+      currentScheduleTimes.push({ hour, minute });
+      renderScheduleChips();
+      await handleSaveSchedule();
+    }
+
+    async function handleRemoveScheduleTime(index) {
+      currentScheduleTimes.splice(index, 1);
+      renderScheduleChips();
+      await handleSaveSchedule();
+    }
+
+    async function setPresetSchedule(type) {
+      if (type === 'default') {
+        currentScheduleTimes = [{ hour: 3, minute: 0 }, { hour: 15, minute: 0 }];
+      } else if (type === 'morning_evening') {
+        currentScheduleTimes = [{ hour: 8, minute: 0 }, { hour: 20, minute: 0 }];
+      } else if (type === 'every_6h') {
+        currentScheduleTimes = [
+          { hour: 0, minute: 0 },
+          { hour: 6, minute: 0 },
+          { hour: 12, minute: 0 },
+          { hour: 18, minute: 0 }
+        ];
+      }
+      renderScheduleChips();
+      await handleSaveSchedule();
+    }
+
+    async function handleSaveSchedule() {
+      btnSaveSchedule.disabled = true;
+      btnSaveSchedule.classList.add('opacity-50');
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_schedule',
+            schedule_times: currentScheduleTimes
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast('Đã lưu cấu hình lịch chạy mới thành công!', true);
+          const timeList = currentScheduleTimes.map(t => `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`).join(', ');
+          log(`⏰ Đã lưu lịch chạy tự động mới: [ ${timeList} ] (Giờ VN)`, 'success');
+        } else {
+          showToast(json.error || 'Có lỗi xảy ra', false);
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      } finally {
+        btnSaveSchedule.disabled = false;
+        btnSaveSchedule.classList.remove('opacity-50');
+      }
+    }
+
+    // ==========================================
+    // QUẢN LÝ TÀI KHOẢN
+    // ==========================================
+    async function loadData() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const json = await res.json();
+          currentAccounts = json.accounts || [];
+          if (json.settings && Array.isArray(json.settings.schedule_times)) {
+            currentScheduleTimes = json.settings.schedule_times;
+          }
+          renderScheduleChips();
+          renderAccountsTable();
+        }
+      } catch (err) {
+        log(`Không thể tải dữ liệu: ${err.message}`, 'warn');
+      }
+    }
+
+    function renderAccountsTable() {
+      accountsCount.textContent = currentAccounts.length;
+
+      if (currentAccounts.length === 0) {
+        accountsTableBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-6 text-center text-slate-500">
+              Chưa có tài khoản nào trong danh sách. Hãy thêm tài khoản ở form phía trên!
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      accountsTableBody.innerHTML = currentAccounts.map(acc => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-3 px-3">
+            <button 
+              onclick="handleToggleAccount('${acc.id || acc.account}')"
+              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                acc.enabled !== false 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }"
+            >
+              <span class="w-1.5 h-1.5 rounded-full ${acc.enabled !== false ? 'bg-emerald-400' : 'bg-slate-500'}"></span>
+              ${acc.enabled !== false ? 'Hoạt động' : 'Tạm dừng'}
+            </button>
+          </td>
+          <td class="py-3 px-3 font-semibold text-white">
+            ${acc.account}
+          </td>
+          <td class="py-3 px-3 text-slate-400 font-mono">
+            ${acc.api2_data || '—'}
+          </td>
+          <td class="py-3 px-3 text-xs max-w-[240px]">
+            ${acc.cookie ? `
+              <div class="space-y-1">
+                <div class="font-mono text-[11px] text-slate-300 truncate bg-slate-950 px-2 py-1 rounded border border-slate-800" title="${acc.cookie}">
+                  ${acc.cookie.length > 30 ? acc.cookie.substring(0, 27) + '...' : acc.cookie}
+                </div>
+                <div class="flex items-center gap-2">
+                  <button 
+                    type="button" 
+                    onclick="openCookieModal('${acc.id || acc.account}', '${acc.account}')" 
+                    class="text-[11px] text-sky-400 hover:text-sky-300 underline font-medium"
+                  >
+                    👁️ Xem / Sửa
+                  </button>
+                  <span class="text-slate-600">|</span>
+                  <button 
+                    type="button" 
+                    onclick="copyAccountCookie('${acc.id || acc.account}')" 
+                    class="text-[11px] text-slate-400 hover:text-slate-200"
+                  >
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
+            ` : `
+              <div class="space-y-1">
+                <span class="text-slate-500 italic text-[11px]">Chưa có cookie</span>
+                <div>
+                  <button 
+                    type="button" 
+                    onclick="openCookieModal('${acc.id || acc.account}', '${acc.account}')" 
+                    class="text-[11px] text-rose-400 hover:underline font-medium"
+                  >
+                    ➕ Thêm Cookie
+                  </button>
+                </div>
+              </div>
+            `}
+          </td>
+          <td class="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
+            <button 
+              onclick="handleTriggerSingle('${acc.account}')" 
+              title="Chạy thử nghiệm riêng cho acc này"
+              class="bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 px-2.5 py-1 rounded-lg border border-slate-700 text-xs transition"
+            >
+              🚀 Chạy thử
+            </button>
+            <button 
+              onclick="handleDeleteAccount('${acc.id || acc.account}', '${acc.account}')" 
+              title="Xóa tài khoản khỏi danh sách"
+              class="bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 px-2 py-1 rounded-lg border border-rose-800/40 text-xs transition"
+            >
+              🗑️ Xóa
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function handleAddAccount() {
+      const account = newAccountInput.value.trim();
+      const api2_data = newPhoneInput.value.trim() || "84123456789";
+      const cookie = newCookieInput.value.trim();
+
+      if (!account) {
+        showToast('Vui lòng nhập tên tài khoản Garena!', false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add',
+            account,
+            api2_data,
+            cookie
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Đã thêm tài khoản "${account}" thành công!`, true);
+          newAccountInput.value = '';
+          newPhoneInput.value = '';
+          newCookieInput.value = '';
+          currentAccounts = json.accounts || [];
+          renderAccountsTable();
+          log(`➕ Đã thêm tài khoản "${account}" vào danh sách`, 'success');
+        } else {
+          showToast(json.error || 'Có lỗi xảy ra', false);
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      }
+    }
+
+    async function handleDeleteAccount(id, accountName) {
+      if (!confirm(`Bạn có chắc muốn xóa tài khoản "${accountName}" khỏi danh sách?`)) return;
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Đã xóa "${accountName}" khỏi danh sách`, true);
+          currentAccounts = json.accounts || [];
+          renderAccountsTable();
+          log(`🗑️ Đã xóa tài khoản "${accountName}"`, 'warn');
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      }
+    }
+
+    async function handleToggleAccount(id) {
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'toggle', id })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          currentAccounts = json.accounts || [];
+          renderAccountsTable();
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      }
+    }
+
+    // ==========================================
+    // MODAL XEM & CHỈNH SỬA COOKIE
+    // ==========================================
+    const cookieModal = document.getElementById('cookieModal');
+    const modalAccountName = document.getElementById('modalAccountName');
+    const modalCookieTextarea = document.getElementById('modalCookieTextarea');
+    let activeEditingAccountId = null;
+
+    function openCookieModal(id, accountName) {
+      const acc = currentAccounts.find(a => (a.id === id || a.account === id || a.account === accountName));
+      if (!acc) return;
+
+      activeEditingAccountId = acc.id || acc.account;
+      modalAccountName.textContent = acc.account;
+      modalCookieTextarea.value = acc.cookie || '';
+      cookieModal.classList.remove('hidden');
+    }
+
+    function closeCookieModal() {
+      cookieModal.classList.add('hidden');
+      activeEditingAccountId = null;
+    }
+
+    function copyModalCookie() {
+      const val = modalCookieTextarea.value.trim();
+      if (!val) {
+        showToast('Không có cookie để sao chép!', false);
+        return;
+      }
+      navigator.clipboard.writeText(val);
+      showToast('Đã sao chép Cookie vào clipboard!', true);
+    }
+
+    function copyAccountCookie(id) {
+      const acc = currentAccounts.find(a => (a.id === id || a.account === id));
+      if (!acc || !acc.cookie) {
+        showToast('Tài khoản này chưa có cookie!', false);
+        return;
+      }
+      navigator.clipboard.writeText(acc.cookie);
+      showToast(`Đã sao chép Cookie của "${acc.account}"!`, true);
+    }
+
+    async function saveModalCookie() {
+      if (!activeEditingAccountId) return;
+      const acc = currentAccounts.find(a => (a.id === activeEditingAccountId || a.account === activeEditingAccountId));
+      if (!acc) return;
+
+      const newCookie = modalCookieTextarea.value.trim();
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add',
+            account: acc.account,
+            api2_data: acc.api2_data,
+            cookie: newCookie
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Đã cập nhật Cookie cho "${acc.account}" thành công!`, true);
+          currentAccounts = json.accounts || [];
+          renderAccountsTable();
+          closeCookieModal();
+          log(`🍪 Đã cập nhật Cookie mới cho tài khoản "${acc.account}"`, 'success');
+        } else {
+          showToast(json.error || 'Lỗi khi lưu cookie', false);
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      }
+    }
+
+    // ==========================================
+    // HIỂN THỊ LOG CHI TIẾT
+    // ==========================================
+    function formatResponseBody(res) {
+      if (!res) return 'Không có dữ liệu';
+      if (typeof res === 'string') return res;
+      if (res.message && res.result !== undefined) return `Result: ${res.result} (${res.message})`;
+      if (res.status && res.result !== undefined) return `Result: ${res.result} (${res.status})`;
+      if (res.error) return `Lỗi: ${res.error}`;
+      try {
+        const str = JSON.stringify(res);
+        return str.length > 90 ? str.substring(0, 87) + '...' : str;
+      } catch (e) {
+        return String(res);
+      }
+    }
+
+    function displayDetailedLogs(result) {
+      if (!result || !result.summary || result.summary.length === 0) {
+        log('Không có dữ liệu chi tiết trả về', 'warn');
+        return;
+      }
+
+      result.summary.forEach((accData) => {
+        log(`-----------------------------------------------------------`);
+        log(`👤 TÀI KHOẢN: <span class="text-white font-bold text-sm">${accData.account}</span> (SĐT: <span class="text-amber-300">${accData.phone}</span>)`, 'highlight');
+
+        if (!accData.rounds || accData.rounds.length === 0) {
+          log(`   ⚠️ Không có lượt chạy nào được ghi nhận cho tài khoản này`, 'warn');
+          return;
+        }
+
+        accData.rounds.forEach((round) => {
+          if (round.status === 'SUCCESS') {
+            const reqId = round.extracted_request_id || 'N/A';
+            const shortReqId = reqId.length > 24 ? reqId.substring(0, 20) + '...' : reqId;
+            log(`   🟢 [INIT ĐỢT ${round.init_round}/2] HTTP ${round.init_http_status || 200} | request_id: <span class="text-amber-300 font-mono">${shortReqId}</span> (${round.duration_ms}ms)`, 'success');
+          } else if (round.status === 'BLOCKED_BY_DATADOME') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] HTTP 403 BỊ CHẶN BỞI DATADOME CAPTCHA! Vui lòng cập nhật Cookie mới.`, 'error');
+          } else if (round.status === 'FAILED_NO_REQUEST_ID') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] HTTP ${round.init_http_status || 'ERR'} - Không lấy được request_id từ API 1`, 'error');
+          } else if (round.status === 'FETCH_ERROR') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] LỖI KẾT NỐI: ${round.error}`, 'error');
+          } else {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] Trạng thái: ${round.status}`, 'warn');
+          }
+
+          if (round.submits && round.submits.length > 0) {
+            round.submits.forEach((sub) => {
+              const respStr = formatResponseBody(sub.response || sub.error);
+              if (sub.http_status === 200) {
+                log(`      ↳ [SUBMIT ${sub.submit_index}/3] ✅ HTTP 200 | Phản hồi: <span class="text-emerald-300 font-mono">${respStr}</span>`);
+              } else {
+                log(`      ↳ [SUBMIT ${sub.submit_index}/3] ❌ HTTP ${sub.http_status || 'LỖI'} | Phản hồi: <span class="text-rose-300 font-mono">${respStr}</span>`, 'error');
+              }
+            });
+          }
+        });
+      });
+
+      log(`-----------------------------------------------------------`);
+      log(`🏁 HOÀN TẤT: Tổng ${result.total_accounts_processed || result.summary.length} tài khoản trong ${result.total_duration_ms}ms`, 'success');
+    }
+
+    async function handleTriggerSingle(accountName) {
+      log(`===========================================================`);
+      log(`🚀 BẮT ĐẦU CHẠY RIÊNG CHO TÀI KHOẢN: "${accountName}"`, 'highlight');
+      log(`Đang gửi request tới API Garena...`);
+
+      try {
+        const res = await fetch('/api/cron', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-requested-from': 'web-ui'
+          },
+          body: JSON.stringify({
+            target_account: accountName,
+            from_ui: true
+          })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          displayDetailedLogs(result);
+          showToast(`Đã chạy xong cho "${accountName}"!`, true);
+        } else {
+          log(`❌ Thất bại: ${result.error}`, 'error');
+          if (result.summary) displayDetailedLogs(result);
+          showToast(`Lỗi: ${result.error}`, false);
+        }
+      } catch (err) {
+        log(`Lỗi kết nối: ${err.message}`, 'error');
+      }
+    }
+
+    async function handleTriggerAll() {
+      const activeAccounts = currentAccounts.filter(a => a.enabled !== false);
+      if (activeAccounts.length === 0) {
+        showToast('Không có tài khoản nào đang ở trạng thái Hoạt động!', false);
+        return;
+      }
+
+      btnTriggerAll.disabled = true;
+      btnTriggerAll.classList.add('opacity-50');
+
+      log(`===========================================================`);
+      log(`⚡ KÍCH HOẠT TIẾN TRÌNH CHO TẤT CẢ (${activeAccounts.length}) TÀI KHOẢN`, 'highlight');
+      log(`Danh sách: ${activeAccounts.map(a => a.account).join(', ')}`);
+      log(`Đang gửi request tới API Garena, vui lòng chờ...`);
+
+      try {
+        const res = await fetch('/api/cron', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-requested-from': 'web-ui'
+          },
+          body: JSON.stringify({ from_ui: true })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          displayDetailedLogs(result);
+          showToast(`Đã hoàn tất chạy cho ${result.total_accounts_processed} tài khoản!`, true);
+        } else {
+          log(`❌ Lỗi: ${result.error}`, 'error');
+          if (result.summary) displayDetailedLogs(result);
+          showToast(result.error, false);
+        }
+      } catch (err) {
+        log(`Lỗi kết nối: ${err.message}`, 'error');
+      } finally {
+        btnTriggerAll.disabled = false;
+        btnTriggerAll.classList.remove('opacity-50');
+      }
+    }
+
+    // Tự động kiểm tra và hiển thị log khi server chạy ngầm theo lịch
+    let lastSeenRunSavedAt = null;
+
+    async function pollLatestLogs() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.latest_run && json.latest_run.saved_at) {
+            if (!lastSeenRunSavedAt) {
+              lastSeenRunSavedAt = json.latest_run.saved_at;
+            } else if (lastSeenRunSavedAt !== json.latest_run.saved_at) {
+              lastSeenRunSavedAt = json.latest_run.saved_at;
+              const runTime = new Date(json.latest_run.saved_at).toLocaleTimeString();
+              log(`===========================================================`);
+              log(`⏰ [PHÁT HIỆN ĐỢT CHẠY TỰ ĐỘNG THEO HẸN GIỜ] (${runTime})`, 'highlight');
+              displayDetailedLogs(json.latest_run);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      setInterval(pollLatestLogs, 3000); // Tự động quét log mới mỗi 3 giây
+    });
+  </script>
+</body>
+</html>
